@@ -108,6 +108,7 @@ input[type="checkbox"] { accent-color: #007acc; vertical-align: middle; }
     const charCountWithSpaces = document.getElementById('char-count-with-spaces');
     const charCountWithoutSpaces = document.getElementById('char-count-without-spaces');
     const lineCount = document.getElementById('line-count');
+    const wrapCheckbox = document.getElementById('wrap');
 
     function updateStats() {
       const text = textbox.value;
@@ -116,11 +117,24 @@ input[type="checkbox"] { accent-color: #007acc; vertical-align: middle; }
       lineCount.textContent = text.length === 0 ? 0 : text.split('\n').length;
     }
 
-    textbox.addEventListener('input', updateStats);
-    window.addEventListener('DOMContentLoaded', updateStats);
+    // 1. ЗАГРУЗКА из localStorage при старте
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedText = localStorage.getItem('mypad_lite_text');
+      if (savedText !== null) {
+        textbox.value = savedText;
+      }
+      
+      const savedWrap = localStorage.getItem('mypad_lite_wrap');
+      if (savedWrap !== null) {
+        wrapCheckbox.checked = savedWrap === 'true';
+      }
+      
+      // Применяем настройки и обновляем статистику
+      applyWrap();
+      updateStats();
+    });
 
-    const wrapCheckbox = document.getElementById('wrap');
-    wrapCheckbox.addEventListener('change', () => {
+    function applyWrap() {
       if (wrapCheckbox.checked) {
         textbox.style.whiteSpace = 'pre-wrap';
         textbox.style.overflowX = 'hidden';
@@ -128,6 +142,17 @@ input[type="checkbox"] { accent-color: #007acc; vertical-align: middle; }
         textbox.style.whiteSpace = 'pre';
         textbox.style.overflowX = 'auto';
       }
+    }
+
+    // 2. СОХРАНЕНИЕ в localStorage при каждом изменении
+    textbox.addEventListener('input', () => {
+      updateStats();
+      localStorage.setItem('mypad_lite_text', textbox.value);
+    });
+
+    wrapCheckbox.addEventListener('change', () => {
+      localStorage.setItem('mypad_lite_wrap', wrapCheckbox.checked);
+      applyWrap();
     });
 
     document.getElementById('select-all').addEventListener('click', () => {
@@ -146,6 +171,7 @@ input[type="checkbox"] { accent-color: #007acc; vertical-align: middle; }
         reader.onload = (event) => {
           textbox.value = event.target.result;
           updateStats();
+          localStorage.setItem('mypad_lite_text', textbox.value); // Сохраняем открытый файл
         };
         reader.readAsText(file);
       }
@@ -163,6 +189,7 @@ input[type="checkbox"] { accent-color: #007acc; vertical-align: middle; }
       URL.revokeObjectURL(url);
     });
 
+    // PWA Service Worker
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
